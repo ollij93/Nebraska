@@ -6,150 +6,125 @@ __all__ = (
     "download"
 )
 
-import argparse
 import csv
 import datetime
 import getpass
-import json
-import mechanize
-import os.path
+import os
 
-def prompt(prompt, password=False):
+from robobrowser import RoboBrowser
+
+def prompt(prompt_message, password=False):
+    """Prompt the user for some input"""
     if password:
-        return getpass.getpass(prompt)
+        val = getpass.getpass(prompt_message)
     else:
-        print prompt,
-        return raw_input()
-
-def extract(data, before, after):
-    start = data.index(before) + len(before)
-    end   = data.index(after, start)
-    return data[start:end]
+        val = input(prompt_message)
+    return val
 
 def download_internal(user_id, from_date, to_date):
-    # a new browser and open the login page
-    br = mechanize.Browser()
-    br.set_handle_robots(False)
-    br.addheaders = [('User-agent', 'LBG Statement Downloader http://github.com/bitplane/tsb-downloader')]
+    """Download the csv files for the transaction between the given dates"""
+    # Create the browser and open the lloyds login page
+    browser = RoboBrowser(parser='html5lib')
+    browser.open('https://online.lloydsbank.co.uk/personal/logon/login.jsp?WT.ac=hpIBlogon')
 
-    br.open('https://online.lloydsbank.co.uk/personal/logon/login.jsp?WT.ac=hpIBlogon')
-    title = br.title()
-    while 'Enter Memorable Information' not in title:
-        print br.title()
-        br.select_form(name='frmLogin')
-        br['frmLogin:strCustomerLogin_userID'] = str(user_id)
-        br['frmLogin:strCustomerLogin_pwd']    = prompt('Enter password: ', True)
-        response = br.submit() # attempt log-in
-        title    = br.title()
+    while 'Enter Memorable Information' not in browser.parsed.title.text:
+        print(browser.parsed.title.text)
+        form = browser.get_form(id='frmLogin')
+        form['frmLogin:strCustomerLogin_userID'] = str(user_id)
+        form['frmLogin:strCustomerLogin_pwd'] = prompt('Enter password: ', True)
+        browser.submit_form(form)
 
     # We're logged in, now enter memorable information
-    print br.title()
-    br.select_form('frmentermemorableinformation1')
-    data   = response.read()
-    field  = 'frmentermemorableinformation1:strEnterMemorableInformation_memInfo{0}'
-    before = '<label for="{0}">'
-    after  = '</label>'
+    print(browser.parsed.title.text)
+    form = browser.get_form(id='frmentermemorableinformation1')
+    field = 'frmentermemorableinformation1:strEnterMemorableInformation_memInfo{0}'
 
     for i in range(1, 4):
-        br[field.format(i)] = ['&nbsp;' + prompt(extract(data, before.format(field.format(i)), after))]
-    response = br.submit()
+        label = browser.find("label", {"for": field.format(i)}) # pylint: disable=E1102
+        form[field.format(i)] = '&nbsp;' + prompt(label.text.strip())
+    browser.submit_form(form)
 
     # hopefully now we're logged in...
-    title = br.title()
-
-    # dismiss any nagging messages
-    if 'Mandatory Messages' in title:
-        for link in br.links():
-            if 'lkcont_to_your_acc' in link.url:
-                br.follow_link(link)
-                break
-
-    title = br.title() #'Personal Account Overview' in title
-
+    print(browser.parsed.title.text)
     links = []
-    for link in br.links():
-        attrs = {attr[0]:attr[1] for attr in link.attrs}
-        if 'id' in attrs and 'lnkAccFuncs_viewStatement' in attrs['id']:
+    for link in browser.get_links("View statement"):
+        if link.text == "View statement":
             links.append(link)
 
     # allow user to choose one
-    print 'Accounts:'
-    for i in range(len(links)):
-        attrs = {attr[0]:attr[1] for attr in links[i].attrs}
-        print '{0}:'.format(i), attrs['data-wt-ac'].split(" resource")[0]
+    print('Accounts:')
+    for index, link in enumerate(links):
+        print('{}:'.format(index), link['data-wt-ac'].split(" resource")[0])
 
-    n = prompt('Please select an account:')
-    link = links[int(n)]
-    response = br.follow_link(link)
+    acc_num = prompt('Please select an account:')
+    browser.follow_link(links[int(acc_num)])
 
-    print br.title()
-    export_link = br.find_link(text='Export')
-    br.follow_link(export_link)
+    print(browser.parsed.title.text)
+    export_link = browser.get_link('Export', id='lnkExportStatementSSR')
+    browser.follow_link(export_link)
 
-    for (f, t) in split_range(from_date, to_date):
-        yield download_range(br, f, t)
+    for (f_date, t_date) in split_range(from_date, to_date):
+        yield download_range(browser, f_date, t_date)
 
 def split_range(from_date, to_date):
-    THREE_MONTHS = datetime.timedelta(days=(28 * 3))
-    ONE_DAY = datetime.timedelta(days=1)
+    """Split the given date range into three month segments"""
+    three_months = datetime.timedelta(days=(28 * 3))
+    one_day = datetime.timedelta(days=1)
 
     assert from_date <= to_date
 
-    while to_date - from_date > THREE_MONTHS:
-        yield (from_date, from_date + THREE_MONTHS)
-        from_date += (THREE_MONTHS + ONE_DAY)
+    while to_date - from_date > three_months:
+        yield (from_date, from_date + three_months)
+        from_date += (three_months + one_day)
 
     yield (from_date, to_date)
 
-def download_range(br, from_date, to_date):
-    print br.title()
-    print 'Exporting {0} to {1}'.format(from_date, to_date)
+def download_range(browser, from_date, to_date):
+    """
+    Download an individual csv file from a browser on the accounts Export page
+    """
+    print(browser.parsed.title.text)
+    print('Exporting {0} to {1}'.format(from_date, to_date))
 
-    br.select_form('export-statement-form')
+    form = browser.get_form('export-statement-form')
+    form["exportDateRange"] = "between"
+    form["searchDateTo"] = to_date.strftime("%d/%m/%Y")
+    form["searchDateFrom"] = from_date.strftime("%d/%m/%Y")
+    form["export-format"] = "Internet banking text/spreadsheet (.CSV)"
+    browser.submit_form(form)
+    print(browser.response.text)
 
-    for control in br.form.controls:
-        if control.type == "radio" and control.name == "exportDateRange":
-                control.value = ["between"]
-        if control.type == "text":
-            if control.name == "searchDateTo":
-                control.value = to_date.strftime("%d/%m/%Y")
-            elif control.name == "searchDateFrom":
-                control.value = from_date.strftime("%d/%m/%Y")
-        if control.type == "select" and control.name == "export-format":
-            for item in control.items:
-                if u"(.CSV)" in item.name:
-                    control.value = [item.name]
-
-    response = br.submit()
-    info = response.info()
-
-    if info.gettype() != 'application/csv':
+    if browser.response.headers["Content-Type"] != 'application/csv':
         raise Exception('Did not get a CSV back (maybe there are more than 150 transactions?)')
 
-    disposition = info.getheader('Content-Disposition')
-    PREFIX='attachment; filename='
-    if disposition.startswith(PREFIX):
-        suggested_prefix, ext = os.path.splitext(disposition[len(PREFIX):])
-        filename = '{0}_{1:%Y-%m-%d}_{2:%Y-%m-%d}{3}'.format(
-            suggested_prefix, from_date, to_date, ext)
-
-        with open(filename, 'a') as f:
-            for line in response:
-                f.write(line)
-
-        print 'Saved transactions to "{0}"'.format(filename)
-    else:
+    disposition = browser.response.headers['Content-Disposition']
+    prefix = 'attachment; filename='
+    if not disposition.startswith(prefix):
         raise Exception('Missing "Content-Disposition: attachment" header')
 
-    br.back()
-    return (filename)
+    suggested_prefix, ext = os.path.splitext(disposition[len(prefix):])
+    filename = '{0}_{1:%Y-%m-%d}_{2:%Y-%m-%d}{3}'.format(
+        suggested_prefix, from_date, to_date, ext)
 
-def download(from_date, to_date):
+    with open(filename, 'a') as csv_file:
+        for line in browser.response.text:
+            csv_file.write(line)
+
+    print('Saved transactions to "{0}"'.format(filename))
+
+    browser.back()
+    return filename
+
+def download(config, from_date, to_date):
+    """Main flow of the lloyds account processing"""
+    if "ids" not in config or "lloyds" not in config["ids"]:
+        raise Exception("Lloyds ID not in config. See README for help with this error.")
+
     transactions = []
-    for filename in download_internal(user_id="USERIDHERE",
+    for filename in download_internal(user_id=config["ids"]["lloyds"],
                                       from_date=from_date,
                                       to_date=to_date):
-        with open(filename, 'rb') as fileopen:
+        with open(filename, 'r') as fileopen:
             csvreader = csv.reader(fileopen)
             firstrow = True
             for row in csvreader:
@@ -163,12 +138,10 @@ def download(from_date, to_date):
                     amount = -float(row[5])
                 else:
                     amount = float(row[6])
-                balance = float(row[7])
                 transactions.append({
-                        "date": date,
-                        "description": desc,
-                        "amount": amount,
-                    })
+                    "date": date,
+                    "description": desc,
+                    "amount": amount,
+                })
         os.remove(filename)
     return transactions
-
