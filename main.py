@@ -13,6 +13,13 @@ import banknodes
 from banking import interactive
 from banking.account import Account
 
+NEBRASKA_DIR = os.path.join(os.path.expanduser("~"), ".nebraska")
+if not os.path.exists(NEBRASKA_DIR):
+    os.makedirs(NEBRASKA_DIR)
+
+CACHE_FILE = os.path.join(NEBRASKA_DIR, "cache.json")
+KNOWN_DESCS_FILE = os.path.join(NEBRASKA_DIR, "known_descriptions.json")
+CONFIG_FILE = os.path.join(NEBRASKA_DIR, "config.json")
 
 ###########################################################
 # UNKNOWN DESCRIPTIONS
@@ -50,8 +57,8 @@ def process_transaction_categorys(known_descriptions, transactions):
 def parseargs():
     """Parse the cli arguments"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--cache',
-                        help="Use a saved transactions file instead of "
+    parser.add_argument('-c', '--cache', action='store_true',
+                        help="Use the saved transactions file instead of "
                              "downloading from the web.")
     return parser.parse_args()
 
@@ -61,26 +68,21 @@ def parseargs():
 ###########################################################
 def init():
     """Initialize by loading the config"""
-    nebraska_dir = os.path.join(os.path.expanduser("~"), ".nebraska")
-    if not os.path.exists(nebraska_dir):
-        os.makedirs(nebraska_dir)
 
     known_descriptions = {}
-    json_filename = os.path.join(nebraska_dir, "known_descriptions.json")
-    if not os.path.exists(json_filename):
-        with open(json_filename, "w") as jfile:
+    if not os.path.exists(KNOWN_DESCS_FILE):
+        with open(KNOWN_DESCS_FILE, "w") as jfile:
             json.dump(jfile, known_descriptions, indent=4)
     else:
-        with open(json_filename, "r") as jfile:
+        with open(KNOWN_DESCS_FILE, "r") as jfile:
             known_descriptions = json.load(jfile)
 
     config = {"keys": {}, "ids": {}}
-    config_filename = os.path.join(nebraska_dir, "config.json")
-    if not os.path.exists(config_filename):
-        with open(config_filename, "w") as config_file:
+    if not os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "w") as config_file:
             json.dump(config_file, config, indent=4)
     else:
-        with open(config_filename, "r") as config_file:
+        with open(CONFIG_FILE, "r") as config_file:
             config = json.load(config_file)
 
     return known_descriptions, config
@@ -112,15 +114,15 @@ def download_all_transactions(known_descriptions, config):
 def main(known_descriptions, config, args):
     """Run the main method"""
     if args.cache:
-        with open(args.cache, "r") as infile:
+        with open(CACHE_FILE, "r") as infile:
             accounts = json.load(infile)['accounts']
             for index, account in enumerate(accounts):
                 accounts[index] = Account.from_dict(account)
     else:
         accounts = download_all_transactions(known_descriptions, config)
-        with open("cache.json", "w") as outfile:
+        with open(CACHE_FILE, "w") as outfile:
             json.dump({"accounts": [account.to_dict() for account in accounts]}, outfile)
-            print("cache.json created")
+            print("cache created")
 
     interactive.run(known_descriptions, accounts)
 
