@@ -7,6 +7,9 @@ import time
 
 import requests
 
+from banking.account import Account
+from banking.transaction import Transaction
+
 def download(config, from_date, to_date):
     """Main flow of the santander account processing"""
     if "keys" not in config or "teller" not in config["keys"]:
@@ -25,12 +28,15 @@ def download(config, from_date, to_date):
             time.sleep(1)
 
     transactions = res.json()
-    ret = []
+    account = Account("santander")
     for transac in transactions:
         transac['amount'] = float(transac['amount'])
 
         date = transac["date"].split("-")
         date = datetime.date(int(date[0]), int(date[1]), int(date[2]))
         if date >= from_date and date <= to_date:
-            ret.append(transac)
-    return ret
+            account.add_transaction(Transaction(transac["date"],
+                                                transac["description"],
+                                                transac["amount"],
+                                                counterparty=transac["counterparty"]))
+    return account
