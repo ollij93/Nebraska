@@ -248,7 +248,10 @@ def main(known_descriptions, config, args):
 
         transactions = download_all_transactions(config)
         with open("cache.json", "w") as outfile:
-            json.dump({"transactions": transactions}, outfile)
+            json.dump({"transactions": transactions},
+                      outfile,
+                      indent=4,
+                      sort-keys=True)
             print("cache.json created")
 
     process_transactions(known_descriptions,
