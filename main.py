@@ -251,7 +251,7 @@ def main(known_descriptions, config, args):
             json.dump({"transactions": transactions},
                       outfile,
                       indent=4,
-                      sort-keys=True)
+                      sort_keys=True)
             print("cache.json created")
 
     process_transactions(known_descriptions,
