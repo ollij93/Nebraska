@@ -8,8 +8,18 @@ __all__ = (
 
 import cmd
 import io
+import json
+import os
 import pydoc
 import sys
+
+NEBRASKA_DIR = os.path.join(os.path.expanduser("~"), ".nebraska")
+if not os.path.exists(NEBRASKA_DIR):
+    os.makedirs(NEBRASKA_DIR)
+
+KNOWN_DESCS_FILE = os.path.join(NEBRASKA_DIR, "known_descriptions.json")
+CONFIG_FILE = os.path.join(NEBRASKA_DIR, "config.json")
+CACHE_FILE = os.path.join(NEBRASKA_DIR, "cache.json")
 
 class BaseCmd(cmd.Cmd):
     """Base class for commands available on all prompts"""
@@ -69,6 +79,31 @@ class BaseCmd(cmd.Cmd):
         """Exit this submode."""
         return True
 
+    def _option_selection(self, options):
+        """Have the user select one of the given options"""
+        for index, option in enumerate(options):
+            print("({:>3}) {}".format(index, option))
+        self.flush_pager()
+
+        option = None
+        while True:
+            try:
+                choice = input("Choose (range 0:{}): ".format(len(options) - 1))
+            except EOFError:
+                print("")
+                break
+            # Exit option selection on empty input
+            if not choice:
+                break
+            try:
+                index = int(choice)
+                option = options[index]
+            except (ValueError, IndexError):
+                pass
+            else:
+                break
+        return option
+
 
 class TopPrompt(BaseCmd):
     """Top level cmd prompt for the interactive mode"""
@@ -80,14 +115,20 @@ class TopPrompt(BaseCmd):
         self.known_descriptions = known_descriptions
         self.accounts = accounts
 
-    def do_account(self, name):
+    def do_accounts(self, name):
         """Move to a given accounts mode"""
-        for account in self.accounts:
-            if account.name == name:
-                AccountPrompt(self.paging_on, account).cmdloop()
-                break
+        if not name:
+            for account in self.accounts:
+                print(account.name)
+        elif len(name.split()) > 1:
+            print("Invalid arguments")
         else:
-            print("Account not found")
+            for account in self.accounts:
+                if account.name == name:
+                    AccountPrompt(self.paging_on, account).cmdloop()
+                    break
+            else:
+                print("Account not found")
 
     def do_dump(self, _):
         """Dump all the accounts and transactions"""
@@ -99,7 +140,7 @@ class TopPrompt(BaseCmd):
         unknowns = {"counterparty": set(), "description": set()}
         for transac in [t for acc in self.accounts
                         for t in acc.get_transactions()
-                        if t.category == "Unknown"]:
+                        if t.get_category() == "Unknown"]:
             if transac.counterparty:
                 unknowns["counterparty"].add(transac.counterparty)
             else:
@@ -155,6 +196,12 @@ class TopPrompt(BaseCmd):
                 print(u"    ({:6.2f}%) {}: \xA3{:.2f}"
                       u"".format(100 * values[key] / total, key, values[key])
                       .replace(u"\xA3-", u"-\xA3"))
+
+    def do_save(self, _):
+        """Save the current state of the accounts to the users cache"""
+        with open(CACHE_FILE, "w") as outfile:
+            json.dump({"accounts": [account.to_dict() for account in self.accounts]}, outfile)
+            print("cache created")
 
 
 class AccountPrompt(BaseCmd):
@@ -213,7 +260,9 @@ class AccountPrompt(BaseCmd):
         elif len(transactions) == 1:
             TransactionPrompt(self.paging_on, transactions[0]).cmdloop()
         else:
-            print("NOT IMPLEMENTED")
+            transaction = self._option_selection(transactions)
+            if transaction is not None:
+                TransactionPrompt(self.paging_on, transaction).cmdloop()
 
 
 class TransactionPrompt(BaseCmd):
@@ -234,7 +283,7 @@ class TransactionPrompt(BaseCmd):
         elif len(arg.split()) > 1:
             print("Too many arguments. Only one category should be specified.")
         else:
-            self.transaction.category = arg
+            self.transaction.set_category_override(arg)
 
 
 def get_values_slim(accounts):
@@ -242,7 +291,7 @@ def get_values_slim(accounts):
     income = {}
     spending = {}
     for transac in [t for acc in accounts for t in acc.get_transactions()]:
-        cat = transac.category
+        cat = transac.get_category()
         values = spending if transac.amount < 0 else income
 
         if cat not in values:

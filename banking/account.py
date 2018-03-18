@@ -26,11 +26,11 @@ class Account:
         }
 
     @staticmethod
-    def from_dict(account_dict):
+    def from_dict(known_descriptions, account_dict):
         """Create an Account object from a dict definition"""
         ret = Account(account_dict["name"])
         for transaction in account_dict["transactions"]:
-            ret.add_transaction(Transaction.from_dict(transaction))
+            ret.add_transaction(Transaction.from_dict(known_descriptions, transaction))
         return ret
 
     def dump(self):
@@ -40,3 +40,16 @@ class Account:
         print("-" * 100)
         for transaction in self._transactions:
             print(transaction)
+
+    def update_from_fresh(self, fresh_account):
+        """Update the existing account with a fresh account from the web"""
+        for fresh_transaction in fresh_account.get_transactions():
+            for transaction in self.get_transactions():
+                if transaction == fresh_transaction:
+                    # This (fresh) transaction is already in the existing
+                    # account so no need to update
+                    break
+            else:
+                # Existing version of this transaction not found so add it to
+                # the existing account
+                self._transactions.append(fresh_transaction)

@@ -117,7 +117,7 @@ def download_range(browser, from_date, to_date):
     browser.back()
     return filename
 
-def download(config, from_date, to_date):
+def download(config, known_descriptions, from_date, to_date):
     """Main flow of the lloyds account processing"""
     if "ids" not in config or "lloyds" not in config["ids"]:
         raise Exception("Lloyds ID not in config. See README for help with this error.")
@@ -140,6 +140,7 @@ def download(config, from_date, to_date):
                     amount = -float(row[5])
                 else:
                     amount = float(row[6])
-                account.add_transaction(Transaction(date, desc, amount))
+                balance_after = float(row[7])
+                account.add_transaction(Transaction(date, desc, amount, balance_after, known_descriptions))
         os.remove(filename)
     return account
