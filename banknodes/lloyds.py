@@ -13,6 +13,9 @@ import os
 
 from robobrowser import RoboBrowser
 
+from banking.account import Account
+from banking.transaction import Transaction
+
 def prompt(prompt_message, password=False):
     """Prompt the user for some input"""
     if password:
@@ -92,7 +95,6 @@ def download_range(browser, from_date, to_date):
     form["searchDateFrom"] = from_date.strftime("%d/%m/%Y")
     form["export-format"] = "Internet banking text/spreadsheet (.CSV)"
     browser.submit_form(form)
-    print(browser.response.text)
 
     if browser.response.headers["Content-Type"] != 'application/csv':
         raise Exception('Did not get a CSV back (maybe there are more than 150 transactions?)')
@@ -115,12 +117,12 @@ def download_range(browser, from_date, to_date):
     browser.back()
     return filename
 
-def download(config, from_date, to_date):
+def download(config, known_descriptions, from_date, to_date):
     """Main flow of the lloyds account processing"""
     if "ids" not in config or "lloyds" not in config["ids"]:
         raise Exception("Lloyds ID not in config. See README for help with this error.")
 
-    transactions = []
+    account = Account("lloyds")
     for filename in download_internal(user_id=config["ids"]["lloyds"],
                                       from_date=from_date,
                                       to_date=to_date):
@@ -138,10 +140,7 @@ def download(config, from_date, to_date):
                     amount = -float(row[5])
                 else:
                     amount = float(row[6])
-                transactions.append({
-                    "date": date,
-                    "description": desc,
-                    "amount": amount,
-                })
+                balance_after = float(row[7])
+                account.add_transaction(Transaction(date, desc, amount, balance_after, known_descriptions))
         os.remove(filename)
-    return transactions
+    return account
