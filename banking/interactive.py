@@ -200,7 +200,10 @@ class TopPrompt(BaseCmd):
     def do_save(self, _):
         """Save the current state of the accounts to the users cache"""
         with open(CACHE_FILE, "w") as outfile:
-            json.dump({"accounts": [account.to_dict() for account in self.accounts]}, outfile)
+            json.dump({"accounts": [account.to_dict() for account in self.accounts]},
+                      outfile,
+                      indent=4,
+                      sort_keys=True)
             print("cache created")
 
 
