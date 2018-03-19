@@ -167,15 +167,25 @@ class TopPrompt(BaseCmd):
         print(u"Net change:{}\xA3{:0.2f}".format(" -" if income < expendature else " ",
                                                  income + expendature))
 
-    def do_breakdown(self, _):
+    def do_breakdown(self, args):
         """Print the slim spending breakdown"""
-        print("Spending breakdown:")
-        income, spending = get_values_slim(self.accounts)
+        args = args.split()
+        if not args:
+            from_date = None
+            to_date = None
+        elif args[0] == "date" and len(args) == 3:
+            from_date = args[1]
+            to_date = args[2]
+        else:
+            print("Invalid args")
+            return
+        income, spending = get_values_slim(self.accounts, from_date, to_date)
 
         # Handle diffs
         # Deleting from income so need to collect all keys before deleting
         keys = [k for k in income
                 if (k in self.known_descriptions
+                    and k in spending
                     and "diff" in self.known_descriptions[k]
                     and self.known_descriptions[k]["diff"])]
         for key in keys:
@@ -189,6 +199,7 @@ class TopPrompt(BaseCmd):
                 del income[key]
                 del spending[key]
 
+        print("Spending breakdown:")
         for values, name in [(income, "income"), (spending, "spending")]:
             print("  {}:".format(name))
             total = sum(values.values())
@@ -289,11 +300,12 @@ class TransactionPrompt(BaseCmd):
             self.transaction.set_category_override(arg)
 
 
-def get_values_slim(accounts):
+def get_values_slim(accounts, from_date=None, to_date=None):
     """Get the set of income and spending values by category"""
     income = {}
     spending = {}
-    for transac in [t for acc in accounts for t in acc.get_transactions()]:
+    for transac in [t for acc in accounts for t in acc.get_transactions()
+                    if (to_date and from_date and t.date <= to_date and t.date >= from_date)]:
         cat = transac.get_category()
         values = spending if transac.amount < 0 else income
 
