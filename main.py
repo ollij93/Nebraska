@@ -5,13 +5,10 @@ Main script for running the bank processor
 import argparse
 import datetime
 import importlib
-import json
-import os
 
 import banknodes
 
-from banking import interactive
-from banking.account import Account
+from banking import run
 
 ###########################################################
 # PARSE ARGS
@@ -23,31 +20,6 @@ def parseargs():
                         help="Use the saved transactions file instead of "
                              "downloading from the web.")
     return parser.parse_args()
-
-
-###########################################################
-# INIT
-###########################################################
-def init():
-    """Initialize by loading the config"""
-
-    known_descriptions = {}
-    if not os.path.exists(interactive.KNOWN_DESCS_FILE):
-        with open(interactive.KNOWN_DESCS_FILE, "w") as jfile:
-            json.dump(jfile, known_descriptions, indent=4)
-    else:
-        with open(interactive.KNOWN_DESCS_FILE, "r") as jfile:
-            known_descriptions = json.load(jfile)
-
-    config = {"keys": {}, "ids": {}}
-    if not os.path.exists(interactive.CONFIG_FILE):
-        with open(interactive.CONFIG_FILE, "w") as config_file:
-            json.dump(config_file, config, indent=4)
-    else:
-        with open(interactive.CONFIG_FILE, "r") as config_file:
-            config = json.load(config_file)
-
-    return known_descriptions, config
 
 
 ###########################################################
@@ -71,14 +43,9 @@ def download_all_transactions(known_descriptions, config):
 ###########################################################
 # MAIN
 ###########################################################
-def main(known_descriptions, config, args):
+def main(args):
     """Run the main method"""
-    accounts = []
-    if os.path.exists(interactive.CACHE_FILE):
-        with open(interactive.CACHE_FILE, "r") as infile:
-            accounts = json.load(infile)['accounts']
-            for index, account in enumerate(accounts):
-                accounts[index] = Account.from_dict(known_descriptions, account)
+    known_descriptions, config, accounts = run.init()
 
     if not args.cache:
         fresh_accounts = download_all_transactions(known_descriptions, config)
@@ -90,12 +57,11 @@ def main(known_descriptions, config, args):
             else:
                 accounts.append(fresh_acc)
 
-    interactive.run(known_descriptions, accounts)
+    run.run(known_descriptions, accounts)
 
 ###########################################################
 # Start of script
 ###########################################################
 if __name__ == '__main__':
     ARGS = parseargs()
-    DESCS, CONFIG = init()
-    main(DESCS, CONFIG, ARGS)
+    main(ARGS)
