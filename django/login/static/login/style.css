@@ -1,0 +1,49 @@
+* {
+    font-family: 'Glegoo', serif;
+    font-weight: 900;
+}
+
+body {
+    margin: 10vh 0vw 0vh 0vw;
+    background: url(https://i.imgur.com/JFEkQAz.jpg) no-repeat center center fixed;
+}
+
+h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 5em;
+    text-align: center;
+}
+
+form {
+    text-align: center;
+    display: grid;
+    
+    grid-template-rows: 1fr 1fr 1fr;;
+    grid-template-columns: 100px auto;
+    grid-column-gap: 20px;
+    
+    align-items: center;
+    
+    margin: 0% 30%;
+}
+
+form h4 {
+    grid-column: 1;
+    text-align: right;
+    justify-content: right;
+}
+
+form input {
+    grid-column: 2;    
+    height: 30px;
+}
+
+form button {
+    width: 200px;
+    grid-row: 3;
+    grid-column: 1 / span 2;
+    
+    margin: 10px 0px;
+    
+    justify-self: center;
+}
