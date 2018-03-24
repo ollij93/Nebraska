@@ -7,9 +7,11 @@ import time
 
 import requests
 
-from banking.account import Account
-from banking.transaction import Transaction
+from ..account import Account
+from ..session import download_method
+from ..transaction import Transaction
 
+@download_method
 def download(config, known_descriptions, from_date, to_date):
     """Main flow of the santander account processing"""
     if "keys" not in config or "teller" not in config["keys"]:

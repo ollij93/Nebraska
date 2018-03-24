@@ -2,10 +2,6 @@
 Download transaction history from Lloyds Bank website
 """
 
-__all__ = (
-    "download"
-)
-
 import csv
 import datetime
 import getpass
@@ -13,8 +9,13 @@ import os
 
 from robobrowser import RoboBrowser
 
-from banking.account import Account
-from banking.transaction import Transaction
+from ..account import Account
+from ..session import download_method
+from ..transaction import Transaction
+
+__all__ = (
+    "download"
+)
 
 def prompt(prompt_message, password=False):
     """Prompt the user for some input"""
@@ -43,7 +44,7 @@ def download_internal(user_id, from_date, to_date):
     field = 'frmentermemorableinformation1:strEnterMemorableInformation_memInfo{0}'
 
     for i in range(1, 4):
-        label = browser.find("label", {"for": field.format(i)}) # pylint: disable=E1102
+        label = browser.find("label", {"for": field.format(i)})
         form[field.format(i)] = '&nbsp;' + prompt(label.text.strip())
     browser.submit_form(form)
 
@@ -117,6 +118,7 @@ def download_range(browser, from_date, to_date):
     browser.back()
     return filename
 
+@download_method
 def download(config, known_descriptions, from_date, to_date):
     """Main flow of the lloyds account processing"""
     if "ids" not in config or "lloyds" not in config["ids"]:
@@ -141,6 +143,7 @@ def download(config, known_descriptions, from_date, to_date):
                 else:
                     amount = float(row[6])
                 balance_after = float(row[7])
-                account.add_transaction(Transaction(date, desc, amount, balance_after, known_descriptions))
+                account.add_transaction(Transaction(date, desc, amount, balance_after,
+                                                    known_descriptions))
         os.remove(filename)
     return account

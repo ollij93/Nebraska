@@ -1,56 +1,50 @@
 """
-interactive.py - handles the interactive mode of the bank processor
+Handles the CLI mode of the bank processor
 """
+
+from cli.accountmode import AccountPrompt
+from cli.common import BasePrompt
+from nebraska import category
 
 __all__ = (
     "run"
 )
 
-import json
-import os
-
-from ._common import (
-    NEBRASKA_DIR,
-    CACHE_FILE,
-    KNOWN_DESCS_FILE,
-    CONFIG_FILE,
-    BasePrompt
-)
-from .account import Account, AccountPrompt
-
-
-class TopPrompt(BasePrompt):
+class SessionPrompt(BasePrompt):
     """Top level cmd prompt for the interactive mode"""
     intro = "Nebraska bank processing"
     prompt = "($$$) "
 
     def do_accounts(self, name):
         """Move to a given accounts mode"""
+        if len(name.split()) > 1:
+            print("INVALID ARGUMENTS")
+
         if not name:
-            for account in self.accounts:
-                print(account.name)
-        elif len(name.split()) > 1:
-            print("Invalid arguments")
+            account = self._option_selection(self.session.accounts)
         else:
-            for account in self.accounts:
-                if account.name == name:
-                    AccountPrompt(self.paging_on, self.known_descriptions, self.accounts,
-                                  account).cmdloop()
+            for acc in self.session.accounts:
+                if acc.name == name:
+                    account = acc
                     break
             else:
                 print("Account not found")
+                return
 
-    def do_dump(self, _):
+        if account:
+            AccountPrompt(self.paging_on, self.session, account).cmdloop()
+
+    def do_show(self, _):
         """Dump all the accounts and transactions"""
-        for account in self.accounts:
+        for account in self.session.accounts:
             account.dump()
 
     def do_unknowns(self, _):
         """Print the unknown descriptions and counterparts"""
         unknowns = {"counterparty": set(), "description": set()}
-        for transac in [t for acc in self.accounts
+        for transac in [t for acc in self.session.accounts
                         for t in acc.get_transactions()
-                        if t.get_category() == "Unknown"]:
+                        if t.get_category() is category.UNKNOWN]:
             if transac.counterparty:
                 unknowns["counterparty"].add(transac.counterparty)
             else:
@@ -67,7 +61,7 @@ class TopPrompt(BasePrompt):
         # Calculate total income and expendature
         income = 0
         expendature = 0
-        for transac in [t for acc in self.accounts for t in acc.get_transactions()]:
+        for transac in [t for acc in self.session.accounts for t in acc.get_transactions()]:
             if transac.amount > 0:
                 income += transac.amount
             else:
@@ -89,15 +83,15 @@ class TopPrompt(BasePrompt):
         else:
             print("Invalid args")
             return
-        income, spending = get_values_slim(self.accounts, from_date, to_date)
+        income, spending = get_values_slim(self.session.accounts, from_date, to_date)
 
         # Handle diffs
         # Deleting from income so need to collect all keys before deleting
         keys = [k for k in income
-                if (k in self.known_descriptions
+                if (k in self.session.categories
                     and k in spending
-                    and "diff" in self.known_descriptions[k]
-                    and self.known_descriptions[k]["diff"])]
+                    and "diff" in self.session.categories[k]
+                    and self.session.categories[k]["diff"])]
         for key in keys:
             if income[key] > abs(spending[key]):
                 income[key] += spending[key]
@@ -145,41 +139,3 @@ def get_values_slim(accounts, from_date=None, to_date=None):
         del income[cat]
         del spending[cat]
     return income, spending
-
-
-def init():
-    """
-    Prepare the module for running
-    """
-    if not os.path.exists(NEBRASKA_DIR):
-        os.makedirs(NEBRASKA_DIR)
-
-    known_descriptions = {}
-    if not os.path.exists(KNOWN_DESCS_FILE):
-        with open(KNOWN_DESCS_FILE, "w") as jfile:
-            json.dump(jfile, known_descriptions, indent=4)
-    else:
-        with open(KNOWN_DESCS_FILE, "r") as jfile:
-            known_descriptions = json.load(jfile)
-
-    config = {"keys": {}, "ids": {}}
-    if not os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "w") as config_file:
-            json.dump(config_file, config, indent=4)
-    else:
-        with open(CONFIG_FILE, "r") as config_file:
-            config = json.load(config_file)
-
-    accounts = []
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, "r") as infile:
-            accounts = json.load(infile)['accounts']
-            for index, account in enumerate(accounts):
-                accounts[index] = Account.from_dict(known_descriptions, account)
-
-    return known_descriptions, config, accounts
-
-
-def run(known_descriptions, accounts):
-    """Launch the interactive prompt"""
-    TopPrompt(False, known_descriptions, accounts).cmdloop()

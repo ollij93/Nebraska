@@ -1,17 +1,19 @@
 """Module implementing features of a bank transaction"""
 
-from ._common import BasePrompt
+from .category import Category
 
 class Transaction:
     """Class representing a bank transaction"""
-    def __init__(self, date, description, amount, balance_after, known_descriptions, *, #pylint: disable=R0913
+    def __init__(self, date, description, amount, balance_after, categories, *,
                  counterparty=None, category_override=None):
         self.date = date
         self.description = description
         self.amount = amount
         self.balance_after = balance_after
         self.counterparty = counterparty
-        self._category = category_from_description(known_descriptions, description, counterparty)
+        self._category = Category.from_description(categories,
+                                                   description=description,
+                                                   counterparty=counterparty)
         self._category_override = category_override
 
     def __str__(self):
@@ -21,7 +23,7 @@ class Transaction:
                           else "-£{:.2f}".format(-self.amount),
                           self.description[:30],
                           self.counterparty[:20] if self.counterparty else "",
-                          self.get_category()[:15]))
+                          self.get_category().name[:15]))
 
     def __eq__(self, other):
         return (self.__class__ == other.__class__
@@ -53,50 +55,14 @@ class Transaction:
         return ret
 
     @staticmethod
-    def from_dict(known_descriptions, transaction_dict):
+    def from_dict(categories, transaction_dict):
         """Create a Transaction object from a dict definition"""
         return Transaction(transaction_dict["date"],
                            transaction_dict["description"],
                            transaction_dict["amount"],
                            transaction_dict["balance_after"],
-                           known_descriptions,
+                           categories,
                            counterparty=transaction_dict["counterparty"],
                            category_override=(transaction_dict["category_override"]
                                               if "category_override" in transaction_dict
                                               else None))
-
-
-class TransactionPrompt(BasePrompt):
-    """Transaction level cmd prompt for the interactive mode"""
-    prompt = "(Transaction) "
-    def __init__(self, paging_on, known_descriptions, accounts, transaction):
-        super().__init__(paging_on, known_descriptions, accounts)
-        self.transaction = transaction
-
-    def do_show(self, _):
-        """Show the current transactions data"""
-        print(self.transaction)
-
-    def do_override_category(self, arg):
-        """Override the category for this transaction"""
-        if not arg:
-            print("No category given")
-        elif len(arg.split()) > 1:
-            print("Too many arguments. Only one category should be specified.")
-        else:
-            self.transaction.set_category_override(arg)
-
-def category_from_description(known_descriptions, description, counterparty=None):
-    """
-    Get the category of the given transaction
-    """
-    for key in known_descriptions:
-        category = known_descriptions[key]
-        descriptions = category["descriptions"] if "descriptions" in category else []
-        counterparts = category["counterparts"] if "counterparts" in category else []
-        if (counterparty is not None and counterparty in counterparts
-                or any([description.startswith(desc)
-                        for desc in descriptions])):
-            return key
-
-    return "Unknown"
