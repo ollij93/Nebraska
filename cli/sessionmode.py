@@ -3,8 +3,9 @@ Handles the CLI mode of the bank processor
 """
 
 from cli.accountmode import AccountPrompt
+from cli.categorymode import CategoryPrompt
 from cli.common import BasePrompt
-from nebraska import category
+from nebraska.category import UNKNOWN
 
 __all__ = (
     "run"
@@ -34,6 +35,25 @@ class SessionPrompt(BasePrompt):
         if account:
             AccountPrompt(self.paging_on, self.session, account).cmdloop()
 
+    def do_categories(self, name):
+        """Move to a given category mode"""
+        if len(name.split()) > 1:
+            print("INVALID ARGUMENTS")
+
+        if not name:
+            category = self._option_selection(self.session.categories)
+        else:
+            for cat in self.session.categories:
+                if cat.name == name:
+                    category = cat
+                    break
+            else:
+                print("Category not found")
+                return
+
+        if category:
+            CategoryPrompt(self.paging_on, self.session, category).cmdloop()
+
     def do_show(self, _):
         """Dump all the accounts and transactions"""
         for account in self.session.accounts:
@@ -44,7 +64,7 @@ class SessionPrompt(BasePrompt):
         unknowns = {"counterparty": set(), "description": set()}
         for transac in [t for acc in self.session.accounts
                         for t in acc.get_transactions()
-                        if t.get_category() is category.UNKNOWN]:
+                        if t.get_category() is UNKNOWN]:
             if transac.counterparty:
                 unknowns["counterparty"].add(transac.counterparty)
             else:

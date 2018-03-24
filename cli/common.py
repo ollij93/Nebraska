@@ -71,6 +71,9 @@ class _BaseCmd(cmd.Cmd):
 
     def _option_selection(self, options):
         """Have the user select one of the given options"""
+        if not options:
+            return
+
         for index, option in enumerate(options):
             print("({:>3}) {}".format(index, option))
         self.flush_pager()
