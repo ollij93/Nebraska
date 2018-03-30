@@ -1,0 +1,95 @@
+/* ======== GLOBAL ======== */
+
+* {
+    margin: 0 0;
+    padding: 0 0;
+}
+
+body {    
+    display: grid;
+    grid-template-areas: 'side_bar main_page';
+    grid-gap: 0px;
+    
+    font-family: 'Josefin Sans', sans-serif;
+}
+
+/* ======== SIDE BAR ======== */
+.side_bar {
+    grid-area: side_bar;
+    height: 100vh;
+    width: 200px;
+    z-index: 1;
+    background-color: #455A64;
+    overflow-x: hidden;
+    
+    box-shadow: 0px 0px 10px black;
+}
+
+.side_bar a {
+    padding: 10px 10px;
+    
+    font-size: 1.25em;
+    font-weight: 100;
+    
+    text-decoration: none;
+    display: block;
+    color: #FFFFFF;
+}
+
+.side_bar a.current_page {
+    background-color: #37474F;
+    border-right: 10px solid #2196F3;
+}
+
+.side_bar a:hover {
+    background-color: #37474F;
+    color: #03A9F4;
+}
+
+/* ======== MAIN PAGE ======== */
+#page_content {
+    background-color: #B0BEC5;
+    grid-area: main_page;
+    width: calc(100vw - 200px);
+}
+
+/* ======== TITLE ======== */
+#title {
+    padding-top: 20px;
+    background-color: #CFD8DC;
+    box-shadow: 0px 0px 10px black;
+    
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    grid-template-columns: auto;
+    text-align: center;
+    height: 90px;
+}
+
+#title h1 {
+    grid-row: 1;
+    align-self: end;
+    
+    color: #37474F;
+    
+    font-family: 'Josefin Slab', serif;
+    font-size: 3em;
+}
+
+#title h2 {
+    grid-row: 2;
+    align-self: start;
+    
+    color: #263238;
+    
+    font-weight: 100;
+    font-size: 1.25em;
+}
+
+/* ======== CHART SAMPLE ======== */
+#chart_sample {
+    margin: 20px 20px;
+    border-radius: 10px;
+    background-color: #CFD8DC;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+}
