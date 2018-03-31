@@ -1,0 +1,19 @@
+{% load static %}
+<html>
+    <head>
+        <Title>Nebraska</Title>
+        <link href="https://fonts.googleapis.com/css?family=Glegoo|Playfair+Display" rel="stylesheet">
+        <link href="{% static 'login/style.css' %}" rel="stylesheet" type="text/css"/>
+    </head>
+    <body>
+        <h1>Nebraska</h1>
+        <form method="POST" action="attempt_login">
+            {% csrf_token %}
+            <h4>Username:</h4>
+            <input type="text" name="username">
+            <h4>Password:</h4>
+            <input type="password" name="password">
+            <button type="submit">Login</button>
+        </form>
+    </body>
+</html>
