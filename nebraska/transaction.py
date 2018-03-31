@@ -23,7 +23,7 @@ class Transaction:
                           else "-£{:.2f}".format(-self.amount),
                           self.description[:30],
                           self.counterparty[:20] if self.counterparty else "",
-                          self.get_category().name[:15]))
+                          self.get_category().get_name()[:15]))
 
     def __eq__(self, other):
         return (self.__class__ == other.__class__
@@ -51,7 +51,7 @@ class Transaction:
             "balance_after": self.balance_after
         }
         if self._category_override:
-            ret["category_override"] = self._category_override
+            ret["category_override"] = self._category_override.get_name()
         return ret
 
     @staticmethod
@@ -63,6 +63,6 @@ class Transaction:
                            transaction_dict["balance_after"],
                            categories,
                            counterparty=transaction_dict["counterparty"],
-                           category_override=(transaction_dict["category_override"]
+                           category_override=(Category.get_category(transaction_dict["category_override"])
                                               if "category_override" in transaction_dict
                                               else None))

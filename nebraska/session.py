@@ -5,7 +5,7 @@ Defines a nebraska Session
 import datetime
 import json
 import os
-from ._common import (
+from .common import (
     NEBRASKA_DIR,
     CACHE_FILE,
     CATEGORIES_FILE,
@@ -18,8 +18,10 @@ from .category import Category
 if not os.path.exists(NEBRASKA_DIR):
     os.makedirs(NEBRASKA_DIR)
 
+
 class Session:
     """A nebraska user session"""
+
     def __init__(self):
         self.accounts = []
         self.config = {}
@@ -30,7 +32,7 @@ class Session:
         raw_categories = {}
         if not os.path.exists(CATEGORIES_FILE):
             with open(CATEGORIES_FILE, "w") as jfile:
-                json.dump(jfile, raw_categories, indent=4)
+                json.dump(raw_categories, jfile, indent=4)
         else:
             with open(CATEGORIES_FILE, "r") as jfile:
                 raw_categories = json.load(jfile)
@@ -40,7 +42,7 @@ class Session:
         self.config = {"keys": {}, "ids": {}}
         if not os.path.exists(CONFIG_FILE):
             with open(CONFIG_FILE, "w") as config_file:
-                json.dump(config_file, self.config, indent=4)
+                json.dump(self.config, config_file, indent=4)
         else:
             with open(CONFIG_FILE, "r") as config_file:
                 self.config = json.load(config_file)
@@ -74,14 +76,24 @@ class Session:
             else:
                 self.accounts.append(fresh_acc)
 
+    def create_category(self, name):
+        """Create a new category with the given name"""
+        self.categories.append(Category(name))
+
+
 ###########################################################
 # DOWNLOAD TRANSACTIONS
 ###########################################################
 DOWNLOAD_METHODS = []
+
+
 def download_method(method):
     """Descriptor for banknodes to register their download method"""
     DOWNLOAD_METHODS.append(method)
-from .banknodes import * # pylint: disable=wrong-import-position
+
+
+from .banknodes import *  # pylint: disable=wrong-import-position
+
 
 def download_all_transactions(categories, config):
     """Load all the nodes and run their download methods"""

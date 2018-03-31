@@ -11,6 +11,7 @@ __all__ = (
     "run"
 )
 
+
 class SessionPrompt(BasePrompt):
     """Top level cmd prompt for the interactive mode"""
     intro = "Nebraska bank processing"
@@ -44,7 +45,7 @@ class SessionPrompt(BasePrompt):
             category = self._option_selection(self.session.categories)
         else:
             for cat in self.session.categories:
-                if cat.name == name:
+                if cat.get_name() == name:
                     category = cat
                     break
             else:
@@ -94,25 +95,19 @@ class SessionPrompt(BasePrompt):
     def do_breakdown(self, args):
         """Print the slim spending breakdown"""
         args = args.split()
-        if not args:
-            from_date = None
-            to_date = None
-        elif args[0] == "date" and len(args) == 3:
-            from_date = args[1]
-            to_date = args[2]
-        else:
-            print("Invalid args")
-            return
+        from_date = None
+        to_date = None
+        if args:
+            if args[0] == "date" and len(args) == 3:
+                from_date = args[1]
+                to_date = args[2]
+            elif args:
+                print("Invalid args")
+                return
         income, spending = get_values_slim(self.session.accounts, from_date, to_date)
 
         # Handle diffs
-        # Deleting from income so need to collect all keys before deleting
-        keys = [k for k in income
-                if (k in self.session.categories
-                    and k in spending
-                    and "diff" in self.session.categories[k]
-                    and self.session.categories[k]["diff"])]
-        for key in keys:
+        for key in [c for c in income if (c in spending and c.diff)]:
             if income[key] > abs(spending[key]):
                 income[key] += spending[key]
                 del spending[key]
@@ -124,38 +119,38 @@ class SessionPrompt(BasePrompt):
                 del spending[key]
 
         print("Spending breakdown:")
-        for values, name in [(income, "income"), (spending, "spending")]:
+        for pairs, name in [(income, "income"), (spending, "spending")]:
             print("  {}:".format(name))
-            total = sum(values.values())
-            for key in sorted(values.keys()):
+            total = sum([pair[1] for pair in pairs])
+            for pair in sorted(pairs, key=lambda p: p[0].get_name()):
                 print(u"    ({:6.2f}%) {}: \xA3{:.2f}"
-                      u"".format(100 * values[key] / total, key, values[key])
+                      u"".format(100 * pair[1] / total, pair[0].get_name(), pair[1])
                       .replace(u"\xA3-", u"-\xA3"))
-
 
 
 def get_values_slim(accounts, from_date=None, to_date=None):
     """Get the set of income and spending values by category"""
-    income = {}
-    spending = {}
+    income = list()
+    spending = list()
+
     for transac in [t for acc in accounts for t in acc.get_transactions()
                     if ((not to_date or not from_date)
-                            or (t.date <= to_date and t.date >= from_date))]:
-        cat = transac.get_category()
+                        or (to_date >= t.date >= from_date))]:
+        category = transac.get_category()
         values = spending if transac.amount < 0 else income
 
-        if cat not in values:
-            values[cat] = 0
-        values[cat] += transac.amount
+        for index, entry in enumerate(values):
+            if entry[0] is category:
+                values[index] = (entry[0], entry[1] + transac.amount)
+                break
+        else:
+            values.append((category, transac.amount))
 
-    for cat in [k for values in [income, spending]
-                for k in values
-                if values[k] == 0]:
-        del values[cat]
+    # Use the list comprehension to be able to remove from income and spending within the loop
+    for income_index, (category, value) in enumerate([i for i in income]):
+        for spending_index, pair in enumerate([s for s in spending]):
+            if category is pair[0] and value == -pair[1]:
+                del income[income_index]
+                del spending[spending_index]
 
-    for cat in [k for k in income
-                if k in spending and spending[k] == -income[k]]:
-        # Spending and income perfectly balance so ignore
-        del income[cat]
-        del spending[cat]
     return income, spending

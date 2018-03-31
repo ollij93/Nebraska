@@ -1,14 +1,16 @@
 """Module implementing features of a bank transaction"""
 
+
 class Category:
     """Class representing a transaction category"""
     _categories = []
 
-    def __init__(self, name, *, parent=None):
+    def __init__(self, name, *, parent=None, diff=False):
         Category._categories.append(self)
-        self.name = name
+        self._name = name
         self.descriptions = []
         self.counterparts = []
+        self.diff = diff
 
         self.children = []
         self.parent = parent
@@ -16,10 +18,15 @@ class Category:
             parent.children.append(self)
 
     def __str__(self):
+        return "Category({})".format(self.get_name())
+
+    def get_name(self):
+        """Get the full name of this category (including parent name)"""
         if self.parent:
-            return self.parent.__str__() + " -- " + self.name
+            return "{}--{}".format(self.parent.get_name(), self._name)
         else:
-            return self.name
+            return self._name
+
 
     @staticmethod
     def from_dict(name, category_dict, *, parent=None):
@@ -32,6 +39,8 @@ class Category:
         if "children" in category_dict:
             for childname in category_dict["children"]:
                 Category.from_dict(childname, category_dict["children"][childname], parent=ret)
+        if "diff" in category_dict and category_dict["diff"]:
+            ret.diff = True
         return ret
 
     @staticmethod
@@ -49,10 +58,11 @@ class Category:
     def get_category(name):
         """Get an existing category from the list"""
         for category in Category._categories:
-            if category.name == name:
+            if category.get_name() == name:
                 return category
 
         print("Failed to find category {}".format(name))
+
 
 # GLOBAL
 UNKNOWN = Category("Unknown")
