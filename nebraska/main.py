@@ -7,6 +7,7 @@ import argparse
 from cli.sessionmode import SessionPrompt
 from .session import Session
 
+
 ###########################################################
 # PARSE ARGS
 ###########################################################
@@ -27,6 +28,7 @@ def main(args):
     session = Session()
     session.load(download=not args.cache)
     SessionPrompt(False, session).cmdloop()
+
 
 ###########################################################
 # Start of script

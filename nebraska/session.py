@@ -51,7 +51,7 @@ class Session:
             with open(CACHE_FILE, "r") as infile:
                 self.accounts = json.load(infile)['accounts']
                 for index, account in enumerate(self.accounts):
-                    self.accounts[index] = Account.from_dict(self.categories, account)
+                    self.accounts[index] = Account.from_dict(account)
 
         if download:
             self.update()
@@ -65,9 +65,16 @@ class Session:
                       sort_keys=True)
             print("cache created")
 
+        with open(CATEGORIES_FILE, "w") as outfile:
+            output = dict()
+            for category in self.categories:
+                output[category.get_name()] = category.get_name()
+            json.dump(output, outfile, indent=4, sort_keys=True)
+            print("categories saved")
+
     def update(self):
         """Update the session by downloading the latest accounts from the web"""
-        fresh_accounts = download_all_transactions(self.categories, self.config)
+        fresh_accounts = download_all_transactions(self.config)
         for fresh_acc in fresh_accounts:
             for account in self.accounts:
                 if account.name == fresh_acc.name:
@@ -95,12 +102,11 @@ def download_method(method):
 from .banknodes import *  # pylint: disable=wrong-import-position
 
 
-def download_all_transactions(categories, config):
+def download_all_transactions(config):
     """Load all the nodes and run their download methods"""
     accounts = []
     for method in DOWNLOAD_METHODS:
         account = method(config,
-                         categories,
                          datetime.date(2018, 1, 1),
                          datetime.date.today())
         accounts.append(account)

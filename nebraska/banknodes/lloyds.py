@@ -17,6 +17,7 @@ __all__ = (
     "download"
 )
 
+
 def prompt(prompt_message, password=False):
     """Prompt the user for some input"""
     if password:
@@ -24,6 +25,7 @@ def prompt(prompt_message, password=False):
     else:
         val = input(prompt_message)
     return val
+
 
 def download_internal(user_id, from_date, to_date):
     """Download the csv files for the transaction between the given dates"""
@@ -70,6 +72,7 @@ def download_internal(user_id, from_date, to_date):
     for (f_date, t_date) in split_range(from_date, to_date):
         yield download_range(browser, f_date, t_date)
 
+
 def split_range(from_date, to_date):
     """Split the given date range into three month segments"""
     three_months = datetime.timedelta(days=(28 * 3))
@@ -82,6 +85,7 @@ def split_range(from_date, to_date):
         from_date += (three_months + one_day)
 
     yield (from_date, to_date)
+
 
 def download_range(browser, from_date, to_date):
     """
@@ -118,8 +122,9 @@ def download_range(browser, from_date, to_date):
     browser.back()
     return filename
 
+
 @download_method
-def download(config, known_descriptions, from_date, to_date):
+def download(config, from_date, to_date):
     """Main flow of the lloyds account processing"""
     if "ids" not in config or "lloyds" not in config["ids"]:
         raise Exception("Lloyds ID not in config. See README for help with this error.")
@@ -143,7 +148,6 @@ def download(config, known_descriptions, from_date, to_date):
                 else:
                     amount = float(row[6])
                 balance_after = float(row[7])
-                account.add_transaction(Transaction(date, desc, amount, balance_after,
-                                                    known_descriptions))
+                account.add_transaction(Transaction(date, desc, amount, balance_after))
         os.remove(filename)
     return account

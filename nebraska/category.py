@@ -27,6 +27,36 @@ class Category:
         else:
             return self._name
 
+    def get_children(self):
+        """Get the list of child categories for this category"""
+        return self.children
+
+    def create_child(self, name):
+        """Create a new child category with the given name"""
+        Category(name, parent=self)
+
+    def add_description(self, desc_string):
+        """Add a description string to this category"""
+        self.descriptions.append(desc_string)
+
+    def add_counterpart(self, counterpart):
+        """Add a counterpart to this category"""
+        self.counterparts.append(counterpart)
+
+    def to_dict(self):
+        """Create a dict representing this category object"""
+        ret = dict()
+        if self.descriptions:
+            ret["descriptions"] = self.descriptions
+        if self.counterparts:
+            ret["counterparts"] = self.counterparts
+        if self.children:
+            ret["children"] = dict()
+            for child in self.children:
+                ret["children"][child.get_name()] = child.to_dict()
+        if self.diff:
+            ret["diff"] = True
+        return ret
 
     @staticmethod
     def from_dict(name, category_dict, *, parent=None):

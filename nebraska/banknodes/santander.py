@@ -12,7 +12,7 @@ from ..session import download_method
 from ..transaction import Transaction
 
 @download_method
-def download(config, known_descriptions, from_date, to_date):
+def download(config, from_date, to_date):
     """Main flow of the santander account processing"""
     if "keys" not in config or "teller" not in config["keys"]:
         raise Exception("Teller API key not in config. See README for help with this error.")
@@ -37,11 +37,10 @@ def download(config, known_descriptions, from_date, to_date):
 
         date = transac["date"].split("-")
         date = datetime.date(int(date[0]), int(date[1]), int(date[2]))
-        if date >= from_date and date <= to_date:
+        if from_date <= date <= to_date:
             account.add_transaction(Transaction(transac["date"],
                                                 transac["description"],
                                                 transac["amount"],
                                                 transac["running_balance"],
-                                                known_descriptions,
                                                 counterparty=transac["counterparty"]))
     return account

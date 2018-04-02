@@ -15,7 +15,7 @@ __all__ = (
 class SessionPrompt(BasePrompt):
     """Top level cmd prompt for the interactive mode"""
     intro = "Nebraska bank processing"
-    prompt = "($$$) "
+    prompt = "(Nebraska) "
 
     def do_accounts(self, name):
         """Move to a given accounts mode"""
@@ -65,7 +65,7 @@ class SessionPrompt(BasePrompt):
         unknowns = {"counterparty": set(), "description": set()}
         for transac in [t for acc in self.session.accounts
                         for t in acc.get_transactions()
-                        if t.get_category() is UNKNOWN]:
+                        if t.get_category(self.session.categories) is UNKNOWN]:
             if transac.counterparty:
                 unknowns["counterparty"].add(transac.counterparty)
             else:
@@ -104,19 +104,21 @@ class SessionPrompt(BasePrompt):
             elif args:
                 print("Invalid args")
                 return
-        income, spending = get_values_slim(self.session.accounts, from_date, to_date)
+        income, spending = get_values_slim(self.session, from_date, to_date)
 
         # Handle diffs
-        for key in [c for c in income if (c in spending and c.diff)]:
-            if income[key] > abs(spending[key]):
-                income[key] += spending[key]
-                del spending[key]
-            elif income[key] < abs(spending[key]):
-                spending[key] += income[key]
-                del income[key]
-            else:
-                del income[key]
-                del spending[key]
+        for income_index, income_pair in enumerate(income):
+            for spending_index, spending_pair in enumerate(spending):
+                if spending_pair[0] is income_pair[0]:
+                    if income_pair[1] > abs(spending_pair[1]):
+                        income[income_index] = (income_pair[0], income_pair[1] + spending_pair[1])
+                        del spending[spending_index]
+                    elif income_pair[1] < abs(spending_pair[1]):
+                        spending[spending_index] = (spending_pair[0], spending_pair[1] + income_pair[1])
+                        del income[income_index]
+                    else:
+                        del income[income_index]
+                        del spending[spending_index]
 
         print("Spending breakdown:")
         for pairs, name in [(income, "income"), (spending, "spending")]:
@@ -127,16 +129,25 @@ class SessionPrompt(BasePrompt):
                       u"".format(100 * pair[1] / total, pair[0].get_name(), pair[1])
                       .replace(u"\xA3-", u"-\xA3"))
 
+    def do_create_category(self, args):
+        """Create a new category with the given name."""
+        args = args.split()
+        if args and len(args) == 1:
+            name = args[0]
+            self.session.create_category(name)
+        else:
+            print("Invalid args")
 
-def get_values_slim(accounts, from_date=None, to_date=None):
+
+def get_values_slim(session, from_date=None, to_date=None):
     """Get the set of income and spending values by category"""
     income = list()
     spending = list()
 
-    for transac in [t for acc in accounts for t in acc.get_transactions()
+    for transac in [t for acc in session.accounts for t in acc.get_transactions()
                     if ((not to_date or not from_date)
                         or (to_date >= t.date >= from_date))]:
-        category = transac.get_category()
+        category = transac.get_category(session.categories)
         values = spending if transac.amount < 0 else income
 
         for index, entry in enumerate(values):
