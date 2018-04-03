@@ -16,7 +16,8 @@ from ..transaction import Transaction
 def download(config, from_date, to_date):
     """Main flow of the santander account processing"""
     if "keys" not in config or "teller" not in config["keys"]:
-        raise Exception("Teller API key not in config. See README for help with this error.")
+        print("Teller API key not in config, skipping. See README for help.")
+        return []
 
     # Get the current accounts information from teller
     success = False

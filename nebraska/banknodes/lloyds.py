@@ -136,7 +136,8 @@ def download_range(browser, from_date, to_date):
 def download(config, from_date, to_date):
     """Main flow of the lloyds account processing"""
     if "ids" not in config or "lloyds" not in config["ids"]:
-        raise Exception("Lloyds ID not in config. See README for help with this error.")
+        print("Lloyds ID not in config, skipping. See README for help.")
+        return []
 
     accounts = []
     for acc_name, filenames in download_internal(user_id=config["ids"]["lloyds"],
