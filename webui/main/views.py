@@ -11,30 +11,24 @@ from nebraska import common
 
 # Create your views here.
 def index(requests):
-	config = json.load(open(common.NEBRASKA_DIR + '/config.json'))
-	parameters = config['ids']
-
 	cache = json.load(open(common.NEBRASKA_DIR + '/cache.json'))
+	transactions = sorted(cache["accounts"][0]["transactions"], key=lambda t: t["date"])
 
-	chart_js_dates = 'var dates = ['
-	chart_js_balances = 'var balnc = ['
+	js_dates = '['
+	js_balnc = '['
 
-	for tran in cache["accounts"][0]["transactions"]:
-		chart_js_dates += 'Date(' + str(tran["date"]) + '), '
-		chart_js_balances += str(tran["balance_after"]) + ", "
+	num_transactions = len(transactions)
 
-	chart_js_dates += '];'
-	chart_js_balances += '];'
+	for i, tran in enumerate(transactions):
+		js_dates += '"' + tran["date"] + '", '
 
-	with open(os.path.dirname(__file__) + '/static/main/chart_script.js', 'r+') as chart_js:
-		chart_js_text = chart_js.read()
+		js_balnc += str(tran["balance_after"]) + ', '
 
-		chart_js_text = chart_js_text.replace('var dates = [];', chart_js_dates)
-		chart_js_text = chart_js_text.replace('var balnc = [];', chart_js_balances)
+	js_dates = js_dates[:-2] + ']'
+	js_balnc = js_balnc[:-2] + ']'
 
-		print(chart_js_text)
-
-		chart_js.seek(0)
-		chart_js.write(chart_js_text)
+	parameters = {}
+	parameters['js_dates'] = js_dates
+	parameters['js_balnc'] = js_balnc
 
 	return render(requests, 'main/index.html', parameters)
