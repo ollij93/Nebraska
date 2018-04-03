@@ -11,6 +11,7 @@ from ..account import Account
 from ..session import download_method
 from ..transaction import Transaction
 
+
 @download_method
 def download(config, from_date, to_date):
     """Main flow of the santander account processing"""
@@ -23,6 +24,8 @@ def download(config, from_date, to_date):
         try:
             headers = {'Authorization': 'Bearer ' + config["keys"]["teller"]}
             res = requests.get('https://api.teller.io/accounts', headers=headers)
+            # Teller doesn't currently support multiple santander accounts, instead duplicating the same.
+            # Just take the first account for now, in future this should be looped
             res = requests.get(res.json()[0]["links"]["transactions"], headers=headers)
             success = True
         except requests.exceptions.ConnectionError:
@@ -43,4 +46,4 @@ def download(config, from_date, to_date):
                                                 transac["amount"],
                                                 transac["running_balance"],
                                                 counterparty=transac["counterparty"]))
-    return account
+    return [account]

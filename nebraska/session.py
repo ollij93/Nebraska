@@ -68,7 +68,7 @@ class Session:
         with open(CATEGORIES_FILE, "w") as outfile:
             output = dict()
             for category in self.categories:
-                output[category.get_name()] = category.get_name()
+                output[category.get_name()] = category.to_dict()
             json.dump(output, outfile, indent=4, sort_keys=True)
             print("categories saved")
 
@@ -106,8 +106,7 @@ def download_all_transactions(config):
     """Load all the nodes and run their download methods"""
     accounts = []
     for method in DOWNLOAD_METHODS:
-        account = method(config,
-                         datetime.date(2018, 1, 1),
-                         datetime.date.today())
-        accounts.append(account)
+        accounts.extend(method(config,
+                               datetime.date(2018, 1, 1),
+                               datetime.date.today()))
     return accounts

@@ -57,20 +57,28 @@ def download_internal(user_id, from_date, to_date):
         if link.text == "View statement":
             links.append(link)
 
-    # allow user to choose one
-    print('Accounts:')
+    # loop through all accounts
     for index, link in enumerate(links):
-        print('{}:'.format(index), link['data-wt-ac'].split(" resource")[0])
+        acc_name = link['data-wt-ac'].split(" resource")[0]
+        print(acc_name)
+        print(browser.parsed.title)
+        browser.follow_link(link)
+        yield acc_name, download_account_internal(browser, from_date, to_date)
+        browser.back()
 
-    acc_num = prompt('Please select an account:')
-    browser.follow_link(links[int(acc_num)])
 
+def download_account_internal(browser, from_date, to_date):
+    """Return the list of csv files downloaded for this account"""
     print(browser.parsed.title.text)
     export_link = browser.get_link('Export', id='lnkExportStatementSSR')
     browser.follow_link(export_link)
 
+    ret = []
     for (f_date, t_date) in split_range(from_date, to_date):
-        yield download_range(browser, f_date, t_date)
+        ret.append(download_range(browser, f_date, t_date))
+
+    browser.back()
+    return ret
 
 
 def split_range(from_date, to_date):
@@ -102,7 +110,8 @@ def download_range(browser, from_date, to_date):
     browser.submit_form(form)
 
     if browser.response.headers["Content-Type"] != 'application/csv':
-        raise Exception('Did not get a CSV back (maybe there are more than 150 transactions?)')
+        print("No transactions could be downloaded for this range.")
+        return None
 
     disposition = browser.response.headers['Content-Disposition']
     prefix = 'attachment; filename='
@@ -129,25 +138,31 @@ def download(config, from_date, to_date):
     if "ids" not in config or "lloyds" not in config["ids"]:
         raise Exception("Lloyds ID not in config. See README for help with this error.")
 
-    account = Account("lloyds")
-    for filename in download_internal(user_id=config["ids"]["lloyds"],
-                                      from_date=from_date,
-                                      to_date=to_date):
-        with open(filename, 'r') as fileopen:
-            csvreader = csv.reader(fileopen)
-            firstrow = True
-            for row in csvreader:
-                if firstrow:
-                    firstrow = False
-                    continue
-                date_raw = row[0].split("/")
-                date = "{}-{}-{}".format(date_raw[2], date_raw[1], date_raw[0])
-                desc = row[4]
-                if row[5] != "":
-                    amount = -float(row[5])
-                else:
-                    amount = float(row[6])
-                balance_after = float(row[7])
-                account.add_transaction(Transaction(date, desc, amount, balance_after))
-        os.remove(filename)
-    return account
+    accounts = []
+    for acc_name, filenames in download_internal(user_id=config["ids"]["lloyds"],
+                                                 from_date=from_date,
+                                                 to_date=to_date):
+        accounts.append(Account("lloyds-" + acc_name))
+        account = accounts[-1]
+        for filename in filenames:
+            if filename is None:
+                continue
+
+            with open(filename, 'r') as fileopen:
+                csvreader = csv.reader(fileopen)
+                firstrow = True
+                for row in csvreader:
+                    if firstrow:
+                        firstrow = False
+                        continue
+                    date_raw = row[0].split("/")
+                    date = "{}-{}-{}".format(date_raw[2], date_raw[1], date_raw[0])
+                    desc = row[4]
+                    if row[5] != "":
+                        amount = -float(row[5])
+                    else:
+                        amount = float(row[6])
+                    balance_after = float(row[7])
+                    account.add_transaction(Transaction(date, desc, amount, balance_after))
+            os.remove(filename)
+    return accounts
