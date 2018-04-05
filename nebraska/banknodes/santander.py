@@ -11,11 +11,13 @@ from ..account import Account
 from ..session import download_method
 from ..transaction import Transaction
 
+
 @download_method
-def download(config, known_descriptions, from_date, to_date):
+def download(config, from_date, to_date):
     """Main flow of the santander account processing"""
     if "keys" not in config or "teller" not in config["keys"]:
-        raise Exception("Teller API key not in config. See README for help with this error.")
+        print("Teller API key not in config, skipping. See README for help.")
+        return []
 
     # Get the current accounts information from teller
     success = False
@@ -23,6 +25,8 @@ def download(config, known_descriptions, from_date, to_date):
         try:
             headers = {'Authorization': 'Bearer ' + config["keys"]["teller"]}
             res = requests.get('https://api.teller.io/accounts', headers=headers)
+            # Teller doesn't currently support multiple santander accounts, instead duplicating the same.
+            # Just take the first account for now, in future this should be looped
             res = requests.get(res.json()[0]["links"]["transactions"], headers=headers)
             success = True
         except requests.exceptions.ConnectionError:
@@ -37,11 +41,10 @@ def download(config, known_descriptions, from_date, to_date):
 
         date = transac["date"].split("-")
         date = datetime.date(int(date[0]), int(date[1]), int(date[2]))
-        if date >= from_date and date <= to_date:
+        if from_date <= date <= to_date:
             account.add_transaction(Transaction(transac["date"],
                                                 transac["description"],
                                                 transac["amount"],
                                                 transac["running_balance"],
-                                                known_descriptions,
                                                 counterparty=transac["counterparty"]))
-    return account
+    return [account]

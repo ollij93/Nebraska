@@ -2,18 +2,17 @@
 
 from .category import Category
 
+
 class Transaction:
     """Class representing a bank transaction"""
-    def __init__(self, date, description, amount, balance_after, categories, *,
+
+    def __init__(self, date, description, amount, balance_after, *,
                  counterparty=None, category_override=None):
         self.date = date
         self.description = description
         self.amount = amount
         self.balance_after = balance_after
         self.counterparty = counterparty
-        self._category = Category.from_description(categories,
-                                                   description=description,
-                                                   counterparty=counterparty)
         self._category_override = category_override
 
     def __str__(self):
@@ -23,7 +22,7 @@ class Transaction:
                           else "-£{:.2f}".format(-self.amount),
                           self.description[:30],
                           self.counterparty[:20] if self.counterparty else "",
-                          self.get_category().name[:15]))
+                          self._category_override.get_name()[:15] if self._category_override else ""))
 
     def __eq__(self, other):
         return (self.__class__ == other.__class__
@@ -33,9 +32,13 @@ class Transaction:
                 and self.balance_after == other.balance_after
                 and self.counterparty == other.counterparty)
 
-    def get_category(self):
+    def get_category(self, categories):
         """Return the category of this transaction"""
-        return self._category_override if self._category_override else self._category
+        return (self._category_override
+                if self._category_override
+                else Category.from_description(categories,
+                                               description=self.description,
+                                               counterparty=self.counterparty))
 
     def set_category_override(self, override):
         """Set the category override for this transaction"""
@@ -51,18 +54,17 @@ class Transaction:
             "balance_after": self.balance_after
         }
         if self._category_override:
-            ret["category_override"] = self._category_override
+            ret["category_override"] = self._category_override.get_name()
         return ret
 
     @staticmethod
-    def from_dict(categories, transaction_dict):
+    def from_dict(transaction_dict):
         """Create a Transaction object from a dict definition"""
         return Transaction(transaction_dict["date"],
                            transaction_dict["description"],
                            transaction_dict["amount"],
                            transaction_dict["balance_after"],
-                           categories,
                            counterparty=transaction_dict["counterparty"],
-                           category_override=(transaction_dict["category_override"]
+                           category_override=(Category.get_category(transaction_dict["category_override"])
                                               if "category_override" in transaction_dict
                                               else None))

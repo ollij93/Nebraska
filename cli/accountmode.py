@@ -4,8 +4,10 @@ Account CLI mode
 from .common import BasePrompt
 from .transactionmode import TransactionPrompt
 
+
 class AccountPrompt(BasePrompt):
     """Account level cmd prompt for the interactive mode"""
+
     def __init__(self, paging_on, session, account):
         super().__init__(paging_on, session)
         self.prompt = "({}) ".format(account.name)
@@ -60,7 +62,7 @@ class AccountPrompt(BasePrompt):
                             if t.date == args[0]]
         elif len(args) == 2:
             transactions = [t for t in self.account.get_transactions()
-                            if t.date >= args[0] and t.date <= args[1]]
+                            if args[0] <= t.date <= args[1]]
         else:
             print("Error: Invalid args")
             print(self.transactions_date.__doc__)

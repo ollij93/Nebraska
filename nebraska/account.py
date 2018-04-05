@@ -30,11 +30,11 @@ class Account:
         }
 
     @staticmethod
-    def from_dict(categories, account_dict):
+    def from_dict(account_dict):
         """Create an Account object from a dict definition"""
         ret = Account(account_dict["name"])
         for transaction in account_dict["transactions"]:
-            ret.add_transaction(Transaction.from_dict(categories, transaction))
+            ret.add_transaction(Transaction.from_dict(transaction))
         return ret
 
     def dump(self):
