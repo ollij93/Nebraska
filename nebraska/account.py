@@ -17,9 +17,12 @@ class Account:
         # so will be missing some sequential elements
         self._transactions.append(transaction)
 
-    def get_transactions(self):
+    def get_transactions(self, *, from_date=None, to_date=None):
         """Return the list of transactions for this account"""
-        return sort_transactions(self._transactions)
+        return sort_transactions([t for t in self._transactions
+                                  if ((from_date is None or t.date >= from_date)
+                                      and (to_date is None or t.date <= to_date))
+                                 ])
 
     def to_dict(self):
         """Return a dict representing the account"""
