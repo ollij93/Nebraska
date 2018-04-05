@@ -1,20 +1,17 @@
 """
-Private common utilities for the banking package
+CLI features common to all modes
 """
+
 import cmd
 import io
-import json
-import os
 import pydoc
 import sys
 
-NEBRASKA_DIR = os.path.join(os.path.expanduser("~"), ".nebraska")
+__all__ = (
+    "BasePrompt",
+)
 
-KNOWN_DESCS_FILE = os.path.join(NEBRASKA_DIR, "known_descriptions.json")
-CONFIG_FILE = os.path.join(NEBRASKA_DIR, "config.json")
-CACHE_FILE = os.path.join(NEBRASKA_DIR, "cache.json")
-
-class BaseCmd(cmd.Cmd):
+class _BaseCmd(cmd.Cmd):
     """Base class for commands available on all prompts"""
     def __init__(self, paging_on):
         super().__init__()
@@ -74,6 +71,9 @@ class BaseCmd(cmd.Cmd):
 
     def _option_selection(self, options):
         """Have the user select one of the given options"""
+        if not options:
+            return
+
         for index, option in enumerate(options):
             print("({:>3}) {}".format(index, option))
         self.flush_pager()
@@ -98,21 +98,15 @@ class BaseCmd(cmd.Cmd):
         return option
 
 
-class BasePrompt(BaseCmd):
+class BasePrompt(_BaseCmd):
     """
     Abstract class for all prompts to be based upon to handle common commands
     to all modes
     """
-    def __init__(self, paging_on, known_descriptions, accounts):
+    def __init__(self, paging_on, session):
         super().__init__(paging_on)
-        self.known_descriptions = known_descriptions
-        self.accounts = accounts
+        self.session = session
 
     def do_save(self, _):
-        """Save the current state of the accounts to the users cache"""
-        with open(CACHE_FILE, "w") as outfile:
-            json.dump({"accounts": [account.to_dict() for account in self.accounts]},
-                      outfile,
-                      indent=4,
-                      sort_keys=True)
-            print("cache created")
+        """Save the current state of the session to the users cache"""
+        self.session.save()
