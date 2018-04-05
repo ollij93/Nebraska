@@ -1,23 +1,25 @@
 """Module implementing features of a bank account"""
 
-from .transaction import Transaction
+from .transaction import Transaction, sort_transactions
 
 class Account:
     """Class representing a bank account"""
     def __init__(self, name, transactions=None):
         self.name = name
-        self._transactions = transactions if transactions else list()
+        self._transactions = sort_transactions(transactions) if transactions else list()
 
     def __str__(self):
         return self.name
 
     def add_transaction(self, transaction):
         """Add a transaction to the list of transactions"""
+        # Can't sort here as the transactions are not necessarily added in order
+        # so will be missing some sequential elements
         self._transactions.append(transaction)
 
     def get_transactions(self):
         """Return the list of transactions for this account"""
-        return self._transactions
+        return sort_transactions(self._transactions)
 
     def to_dict(self):
         """Return a dict representing the account"""
@@ -57,4 +59,4 @@ class Account:
                 # Existing version of this transaction not found so add it to
                 # the existing account
                 self._transactions.append(fresh_transaction)
-        self._transactions = sorted(self._transactions, key=lambda x: x.date)
+        self._transactions = sort_transactions(self._transactions)
