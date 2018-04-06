@@ -15,6 +15,9 @@ class Transaction:
         self.counterparty = counterparty
         self._category_override = category_override
 
+    def __repr__(self):
+        return self.__str__()
+
     def __str__(self):
         return ("| {:10} | {:>9} | {:30} | {:20} | {:15} |"
                 "".format(self.date[:10],
@@ -68,3 +71,31 @@ class Transaction:
                            category_override=(Category.get_category(transaction_dict["category_override"])
                                               if "category_override" in transaction_dict
                                               else None))
+
+def sort_transactions(transactions):
+    """Sort the list of transactions so they are in chronological order"""
+
+    def are_sequential(before, after):
+        """Check if the given transactions are sequential"""
+        return (before.date <= after.date
+                and ("{:.2f}".format(before.balance_after + after.amount)
+                     == "{:.2f}".format(after.balance_after)))
+
+    sorted_t = [transactions[0]]
+    unsorted_t = transactions[1:]
+    while unsorted_t:
+        insert_index = None
+        for index, transaction in enumerate(unsorted_t):
+            if are_sequential(transaction, sorted_t[0]):
+                sorted_t.insert(0, transaction)
+                insert_index = index
+                break
+            elif are_sequential(sorted_t[-1], transaction):
+                sorted_t.append(transaction)
+                insert_index = index
+                break
+        else:
+            raise Exception("Failed to sort transactions: " + str(transactions))
+        del unsorted_t[insert_index]
+
+    return sorted_t
