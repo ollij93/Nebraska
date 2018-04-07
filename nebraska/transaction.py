@@ -75,6 +75,9 @@ class Transaction:
 def sort_transactions(transactions):
     """Sort the list of transactions so they are in chronological order"""
 
+    if not transactions:
+        return transactions
+
     def are_sequential(before, after):
         """Check if the given transactions are sequential"""
         return (before.date <= after.date

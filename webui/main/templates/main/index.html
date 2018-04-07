@@ -4,10 +4,12 @@
     <head>
         <title>Nebraska | Home</title>
         
-        <link href="https://fonts.googleapis.com/css?family=Josefin+Sans|Josefin+Slab" rel="stylesheet">
-        <link href="{% static 'main/style.css' %}" rel="stylesheet" type="text/css">
-        
+        <link href="https://fonts.googleapis.com/css?family=Josefin+Sans|Josefin+Slab" rel="stylesheet"/>
+        <link href="{% static 'main/style.css' %}" rel="stylesheet" type="text/css"/>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+        <script src="{% static 'main/balanceChart.js' %}"></script>
     </head>
     <body>
         <div id="title">
@@ -15,34 +17,10 @@
             <h2>Online Banking Companion</h2>
         </div>
         <div id="page_body">
-            <div id="chart_sample">
-                <canvas id="chart1"></canvas>
-                <script>
-                    var dates = {{ js_dates|safe }};
-                    var balnc = {{ js_balnc|safe }};
-                    var cnvs = document.getElementById('chart1');
-                    var chrt = new Chart(cnvs, {
-                        type: 'line',
-                        data: {
-                            labels: dates,
-                            datasets: [{
-                                data: balnc
-                            }]
-                        },
-                        options: {
-                            layout: {
-                                padding: {
-                                    left: 20,
-                                    right: 20,
-                                    top: 20,
-                                    bottom: 20
-                                }
-                            }
-                        }
-                    });
-                </script>
+            <div id="chart_sample1">
+                <canvas id="balanceChart" style="height: 500px; width: 500px;"></canvas>
             </div>
-            <div id="chart_sample">Another chart here plz</div>
+            <div id="chart_sample2">Another chart here plz</div>
         </div>
     </body>
 </html>

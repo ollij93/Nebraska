@@ -1,37 +1,58 @@
-from django.conf import settings
-from django.conf.urls.static import static
-from django.shortcuts import render
+import datetime
 
-import json
-import os
-import sys
-sys.path.insert(0, '../../nebraska')
+import itertools
+from django.shortcuts import render
+from django.http import JsonResponse
 
 from nebraska.session import Session
 
+
 # Create your views here.
-def index(requests):
+def json(requests):
     session = Session()
     session.load()
 
-    transactions = sorted(session.accounts[0].get_transactions(),
-                          key=lambda t: t.date)
+    all_transactions = sorted(itertools.chain.from_iterable([a.get_transactions() for a in session.accounts]),
+                              key=lambda x: x.date)
 
-    js_dates = '['
-    js_balnc = '['
+    from_date = all_transactions[0].date.split("-")
+    to_date = all_transactions[-1].date.split("-")
 
-    num_transactions = len(transactions)
+    from_date = datetime.date(int(from_date[0]), int(from_date[1]), int(from_date[2]))
+    to_date = datetime.date(int(to_date[0]), int(to_date[1]), int(to_date[2]))
 
-    for i, tran in enumerate(transactions):
-        js_dates += '"' + tran.date + '", '
+    delta = to_date - from_date
 
-        js_balnc += str(tran.balance_after) + ', '
+    # Get the set of date strings in the required range
+    dates = []
+    for i in range(delta.days + 1):
+        dates.append(str(from_date + datetime.timedelta(days=i)))
 
-    js_dates = js_dates[:-2] + ']'
-    js_balnc = js_balnc[:-2] + ']'
+    # Reverse the dates so the balance can be tracked backwards
+    dates.reverse()
 
-    parameters = {}
-    parameters['js_dates'] = js_dates
-    parameters['js_balnc'] = js_balnc
+    balances = {}
+    for account in session.accounts:
+        if not account.get_transactions():
+            continue
+        balances[account.name] = [0] * len(dates)
+        for idx, date in enumerate(dates):
+            previous_transactions = account.get_transactions(to_date=date)
+            if previous_transactions:
+                balances[account.name][idx] = previous_transactions[-1].balance_after
+            else:
+                future_transactions = account.get_transactions(from_date=date)
+                balances[account.name][idx] = future_transactions[0].balance_after - future_transactions[0].amount
 
-    return render(requests, 'main/index.html', parameters)
+    balances["total"] = [sum([balances[account][idx] for account in balances]) for idx in range(len(dates))]
+
+    # Put all the dates back in order
+    dates.reverse()
+    for key in balances:
+        balances[key].reverse()
+
+    return JsonResponse({"dates": dates, "balances": balances})
+
+
+def index(requests):
+    return render(requests, 'main/index.html')
