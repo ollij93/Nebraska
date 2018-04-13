@@ -55,4 +55,4 @@ def json(requests):
 
 
 def index(requests):
-    return render(requests, 'main/index.html')
+    return render(requests, 'nebraska-webui/index.html')
