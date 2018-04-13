@@ -12,10 +12,16 @@ body {
     grid-template-rows: 105px auto;
     
     background-color: #F44336;
+    
+    display: flex;
+    flex-flow: column;
+    height: 100vh;
 }
 
 /* ======== TITLE ======== */
 #title {
+    flex: 0 1 auto;
+    
     padding-top: 20px;
     background-color: #B71C1C;
     box-shadow: 0px 0px 10px black;
@@ -26,6 +32,8 @@ body {
     z-index: 1;
     
     text-align: center;
+    
+    height: 90px;
 }
 
 #title h1 {    
@@ -43,22 +51,42 @@ body {
 }
 
 /* ======== MAIN PAGE ======== */
-#page_body {
-    grid-row: 2;
-    margin: 0 auto;
-    width: 90vw;
+#page-body {
+    flex: 1 1 auto;
     
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
+    grid-row: 2;
+    margin: 10px auto;
+    width: 80vw;
+    
+    height: calc(100vh - 90px);
+    
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    grid-template-areas:
+        'balance-chart balance-chart'
+        'left right';
+    grid-gap: 10px 10px;
 }
 
-#chart_sample {
-    margin: 20px;
+#chart-sample {
+    grid-area: balance-chart;
+    justify-self: stretch;
+    
     border-radius: 10px;
     background-color: #FFCDD2;
     box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.75);
-    
-    width: 500px;
+}
+
+#placehold-left {
+    grid-area: left;
+    border-radius: 10px;
+    background-color: #FFCDD2;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.75);
+}
+
+#placehold-right {
+    grid-area: right;
+    border-radius: 10px;
+    background-color: #FFCDD2;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.75);
 }
