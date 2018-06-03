@@ -97,6 +97,7 @@ DOWNLOAD_METHODS = []
 def download_method(method):
     """Descriptor for banknodes to register their download method"""
     DOWNLOAD_METHODS.append(method)
+    return method
 
 
 from .banknodes import *  # pylint: disable=wrong-import-position
