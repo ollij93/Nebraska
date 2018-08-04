@@ -19,13 +19,12 @@ class Transaction:
         return self.__str__()
 
     def __str__(self):
-        return ("| {:10} | {:>9} | {:30} | {:20} | {:15} |"
-                "".format(self.date[:10],
-                          " £{:.2f}".format(self.amount) if self.amount >= 0
-                          else "-£{:.2f}".format(-self.amount),
-                          self.description[:30],
-                          self.counterparty[:20] if self.counterparty else "",
-                          self._category_override.get_name()[:15] if self._category_override else ""))
+        date = self.date[:10]
+        amount = "{}£{:.2f}".format("-" if self.amount < 0 else " ", self.amount)
+        description = self.description[:30]
+        counterparty = self.counterparty[:20] if self.counterparty else ""
+        category = self._category_override.get_name()[:15] if self._category_override else ""
+        return "| {:10} | {:>9} | {:30} | {:20} | {:15} |".format(date, amount, description, counterparty, category)
 
     def __eq__(self, other):
         return (self.__class__ == other.__class__

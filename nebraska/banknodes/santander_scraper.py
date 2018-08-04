@@ -176,7 +176,7 @@ def download(config, from_date, to_date):
                             "date": "{}-{}-{}".format(date_raw[2], date_raw[1], date_raw[0])
                         }
                     if linenum % 5 == 1:
-                        transaction_dict["desc"] = line.split()[1:]
+                        transaction_dict["desc"] = " ".join(line.split()[1:])
                     if linenum % 5 == 2:
                         transaction_dict["amount"] = float(line.split()[1])
                     if linenum % 5 == 3:
